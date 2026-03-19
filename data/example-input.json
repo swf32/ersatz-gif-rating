@@ -1,0 +1,187 @@
+{
+  "date": "2026-03-18",
+  "tiers": {
+    "tier_3": [],
+    "tier_2": [
+      {
+        "username": "ezerskianton",
+        "points_yesterday": 279,
+        "points_current": 279
+      },
+      {
+        "username": "svyatmary",
+        "points_yesterday": 222,
+        "points_current": 222
+      },
+      {
+        "username": "kealele",
+        "points_yesterday": 174,
+        "points_current": 174
+      },
+      {
+        "username": "A3rospace",
+        "points_yesterday": 105,
+        "points_current": 105
+      },
+      {
+        "username": "Sc4r4bey",
+        "points_yesterday": 38,
+        "points_current": 38
+      },
+      {
+        "username": "semi_png",
+        "points_yesterday": 32,
+        "points_current": 32
+      },
+      {
+        "username": "DrRealPepe",
+        "points_yesterday": 26,
+        "points_current": 32
+      },
+      {
+        "username": "dreamofgregory",
+        "tier_yesterday": "tier_1",
+        "points_yesterday": 100,
+        "points_current": 28
+      },
+      {
+        "username": "Anaptal",
+        "points_yesterday": 27,
+        "points_current": 27
+      },
+      {
+        "username": "ONE1SIDE",
+        "points_yesterday": 26,
+        "points_current": 26
+      },
+      {
+        "username": "Poipolee",
+        "points_yesterday": 7,
+        "points_current": 7
+      }
+    ],
+    "tier_1": [
+      {
+        "username": "Anat0ly7",
+        "points_yesterday": 107,
+        "points_current": 118
+      },
+      {
+        "username": "weazenvevo",
+        "points_yesterday": 98,
+        "points_current": 98
+      },
+      {
+        "username": "amoshakov",
+        "points_yesterday": 82,
+        "points_current": 82
+      },
+      {
+        "username": "digitaldes",
+        "points_yesterday": 53,
+        "points_current": 53
+      },
+      {
+        "username": "Yaroslav_Tikunov",
+        "points_yesterday": 52,
+        "points_current": 52
+      },
+      {
+        "username": "Pshesyoma",
+        "points_yesterday": 49,
+        "points_current": 49
+      },
+      {
+        "username": "neva_veronica",
+        "points_yesterday": 40,
+        "points_current": 45
+      },
+      {
+        "username": "achmiz_kontentmen",
+        "points_yesterday": 44,
+        "points_current": 44
+      },
+      {
+        "username": "nythree",
+        "points_yesterday": 40,
+        "points_current": 40
+      },
+      {
+        "username": "itsnotkenzo",
+        "points_yesterday": 28,
+        "points_current": 33
+      },
+      {
+        "username": "Marti_pzh",
+        "points_yesterday": 30,
+        "points_current": 30
+      },
+      {
+        "username": "SharpVoid",
+        "points_yesterday": 25,
+        "points_current": 25
+      },
+      {
+        "username": "haan1mi",
+        "points_yesterday": 22,
+        "points_current": 22
+      },
+      {
+        "username": "torium0",
+        "points_yesterday": 20,
+        "points_current": 20
+      },
+      {
+        "username": "ssanyaFG",
+        "points_yesterday": 19,
+        "points_current": 19
+      },
+      {
+        "username": "tetsuyanakayama",
+        "points_yesterday": 8,
+        "points_current": 18
+      },
+      {
+        "username": "misha_35898",
+        "points_yesterday": 16,
+        "points_current": 16
+      },
+      {
+        "username": "KirkNext",
+        "points_yesterday": 13,
+        "points_current": 17
+      },
+      {
+        "username": "Maria_mxmx",
+        "points_yesterday": 13,
+        "points_current": 13
+      }
+    ]
+  },
+  "today_gains": [
+    {
+      "username": "DrRealPepe",
+      "gain": 6
+    },
+    {
+      "username": "Anat0ly7",
+      "gain": 11
+    },
+    {
+      "username": "neva_veronica",
+      "gain": 5
+    },
+    {
+      "username": "itsnotkenzo",
+      "gain": 5
+    },
+    {
+      "username": "tetsuyanakayama",
+      "gain": 10
+    },
+    {
+      "username": "KirkNext",
+      "gain": 10
+    }
+  ]
+}

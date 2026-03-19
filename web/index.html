@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Leaderboard Renderer</title>
+    <link rel="icon" href="data:,">
+    <link rel="stylesheet" href="./styles.css">
+    <script type="module" src="./app.js"></script>
+  </head>
+  <body>
+    <div id="capture-frame">
+      <main class="page-shell">
+        <header class="page-header">
+          <p class="eyebrow">local render</p>
+          <h1 id="headline">Загрузка рейтинга...</h1>
+          <p id="subtitle" class="subtitle"></p>
+        </header>
+        <section id="board" class="board-grid" aria-live="polite"></section>
+      </main>
+    </div>
+  </body>
+</html>

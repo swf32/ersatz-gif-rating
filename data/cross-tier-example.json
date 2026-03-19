@@ -1,0 +1,47 @@
+{
+  "date": "2026-03-20",
+  "tiers": {
+    "tier_3": [],
+    "tier_2": [
+      {
+        "username": "beta",
+        "tier_yesterday": "tier_1",
+        "points_yesterday": 88,
+        "points_current": 110
+      },
+      {
+        "username": "gamma",
+        "points_yesterday": 96,
+        "points_current": 90
+      },
+      {
+        "username": "delta",
+        "points_yesterday": 92,
+        "points_current": 92
+      },
+      {
+        "username": "epsilon",
+        "points_yesterday": 80,
+        "points_current": 80
+      }
+    ],
+    "tier_1": [
+      {
+        "username": "alpha",
+        "tier_yesterday": "tier_2",
+        "points_yesterday": 70,
+        "points_current": 54
+      },
+      {
+        "username": "zeta",
+        "points_yesterday": 60,
+        "points_current": 60
+      },
+      {
+        "username": "eta",
+        "points_yesterday": 55,
+        "points_current": 55
+      }
+    ]
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "name": "ersatz-gif-rating",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "preview": "python3 -m leaderboard_video.preview",
+    "render": "python3 -m leaderboard_video",
+    "record": "node tools/record_video.mjs",
+    "install:browsers": "npx playwright install chromium",
+    "smoke": "python3 -m leaderboard_video --input data/example-input.json"
+  },
+  "dependencies": {
+    "playwright": "^1.50.0"
+  }
+}
