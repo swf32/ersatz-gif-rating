@@ -17,6 +17,7 @@ const querySubtitle = readOptionalParam("subtitle");
 const queryLocale = readOptionalParam("locale");
 const positiveScoreColor = "#35AD2E";
 const negativeScoreColor = "#CA2828";
+const tierChangeColor = "#2F6BFF";
 
 let releaseStart;
 const startSignal = new Promise((resolve) => {
@@ -138,16 +139,16 @@ function normalizeIncomingConfig(raw) {
   const settings = {
     fps: readPositiveInteger(queryFps, settingsRaw.fps, 60),
     idle_before_ms: readPositiveInteger(queryIdleBeforeMs, settingsRaw.idle_before_ms, 1000),
-    idle_after_ms: readPositiveInteger(queryIdleAfterMs, settingsRaw.idle_after_ms, 1000),
+    idle_after_ms: readPositiveInteger(queryIdleAfterMs, settingsRaw.idle_after_ms, 3000),
     row_animation_frames: readPositiveInteger(
       queryRowAnimationFrames,
       settingsRaw.row_animation_frames,
-      26
+      52
     ),
     row_stagger_frames: readPositiveInteger(
       queryRowStaggerFrames,
       settingsRaw.row_stagger_frames,
-      10
+      5
     ),
     locale: queryLocale ?? asNonEmptyString(settingsRaw.locale) ?? "ru-RU"
   };
@@ -514,14 +515,14 @@ function buildBoardModel(config) {
       rankDelta
     };
     enrichedMember.movementType = resolveMovementType(enrichedMember);
-    enrichedMember.isAnimated =
+    enrichedMember.hasOwnChange =
       member.tierYesterday !== member.tierCurrent ||
-      currentRank !== yesterdayRank ||
       member.pointsCurrent !== member.pointsYesterday;
-    enrichedMember.isPrimaryMover =
-      member.tierYesterday !== member.tierCurrent ||
-      member.pointsCurrent !== member.pointsYesterday ||
-      enrichedMember.movementType === "up";
+    enrichedMember.isAnimated =
+      enrichedMember.hasOwnChange ||
+      currentRank !== yesterdayRank ||
+      member.tierYesterday !== member.tierCurrent;
+    enrichedMember.isPrimaryMover = enrichedMember.hasOwnChange;
     membersByUser.set(member.username, enrichedMember);
   }
 
@@ -654,10 +655,7 @@ function renderFinalSnapshot(boardState) {
     const scoreNode = row.querySelector(".score-value");
     scoreNode.textContent = String(member.pointsCurrent);
     applyRankVisual(row, member.currentRank);
-    row.querySelector(".score-glyph").style.color = "";
-    row.querySelector(".score-value").style.color = "";
-    row.querySelector(".score-delta").style.opacity = "0";
-    row.querySelector(".score-delta").style.color = "";
+    applyStaticScoreChange(row, member);
     row.style.transition = "";
     row.style.transform = "";
     row.style.opacity = "1";
@@ -741,7 +739,7 @@ function createTimelineRenderer(boardState, settings) {
 
   const timeline = buildTimelineMetrics(settings, scheduledStates.length);
   scheduledStates.forEach((state, index) => {
-    state.startFrame = timeline.idleBeforeFrames + index * timeline.rowStaggerFrames;
+    state.startFrame = timeline.idleBeforeFrames + index * (timeline.rowAnimationFrames + timeline.rowStaggerFrames);
   });
 
   const stageSnapshots = buildStageSnapshots(boardState, scheduledStates);
@@ -1020,7 +1018,7 @@ function buildTimelineMetrics(settings, animatedCount) {
   const rowStaggerFrames = settings.row_stagger_frames;
   const animationFrames =
     animatedCount > 0
-      ? rowAnimationFrames + rowStaggerFrames * Math.max(0, animatedCount - 1)
+      ? rowAnimationFrames * animatedCount + rowStaggerFrames * Math.max(0, animatedCount - 1)
       : 0;
   const totalFrames = idleBeforeFrames + animationFrames + idleAfterFrames;
 
@@ -1163,28 +1161,27 @@ function resolveDisplayedRank(state, frame, timeline) {
 }
 
 function renderScoreChange(state, frame, timeline) {
-  const delta = state.member.pointsCurrent - state.member.pointsYesterday;
-  if (!state.primaryEvent || delta === 0) {
+  const indicator = resolveScoreIndicator(state.member);
+  if (!state.primaryEvent || !indicator) {
     resetScoreChange(state);
     return;
   }
 
   const localFrame = frame - state.primaryEvent.startFrame;
-  if (localFrame < 0 || localFrame >= timeline.rowAnimationFrames) {
+  if (localFrame < 0) {
     resetScoreChange(state);
     return;
   }
 
-  const accentOpacity = resolveScoreChangeOpacity(localFrame, timeline.rowAnimationFrames);
-  const accentColor = delta > 0 ? positiveScoreColor : negativeScoreColor;
-  const mixedColor = mixHexColors("#000000", accentColor, accentOpacity);
+  if (localFrame >= timeline.rowAnimationFrames) {
+    applyScoreChangeVisual(state, indicator.color, 1, indicator);
+    return;
+  }
 
-  state.scoreGlyphNode.style.color = mixedColor;
-  state.scoreNode.style.color = mixedColor;
-  state.scoreDeltaNode.style.color = mixedColor;
-  state.scoreDeltaNode.style.opacity = String(accentOpacity);
-  state.scoreDeltaArrowNode.textContent = delta > 0 ? "↑" : "↓";
-  state.scoreDeltaValueNode.textContent = String(Math.abs(delta));
+  const accentOpacity = resolveScoreChangeOpacity(localFrame, timeline.rowAnimationFrames);
+  const mixedColor = mixHexColors("#000000", indicator.color, accentOpacity);
+
+  applyScoreChangeVisual(state, mixedColor, accentOpacity, indicator);
 }
 
 function resetScoreChange(state) {
@@ -1198,12 +1195,63 @@ function resetScoreChange(state) {
 
 function resolveScoreChangeOpacity(localFrame, durationFrames) {
   const fadeInFrames = Math.min(4, durationFrames);
-  const fadeOutFrames = Math.min(6, durationFrames);
-  const fadeIn = easeOutCubic(clamp(localFrame / Math.max(1, fadeInFrames), 0, 1));
-  const fadeOut = easeOutCubic(
-    clamp((durationFrames - localFrame) / Math.max(1, fadeOutFrames), 0, 1)
-  );
-  return Math.min(fadeIn, fadeOut);
+  return easeOutCubic(clamp(localFrame / Math.max(1, fadeInFrames), 0, 1));
+}
+
+function applyScoreChangeVisual(state, color, opacity, indicator) {
+  state.scoreGlyphNode.style.color = color;
+  state.scoreNode.style.color = color;
+  state.scoreDeltaNode.style.color = color;
+  state.scoreDeltaNode.style.opacity = String(opacity);
+  state.scoreDeltaArrowNode.textContent = indicator.leadingText;
+  state.scoreDeltaValueNode.textContent = indicator.trailingText;
+}
+
+function applyStaticScoreChange(row, member) {
+  const scoreGlyphNode = row.querySelector(".score-glyph");
+  const scoreNode = row.querySelector(".score-value");
+  const scoreDeltaNode = row.querySelector(".score-delta");
+  const scoreDeltaArrowNode = row.querySelector(".score-delta-arrow");
+  const scoreDeltaValueNode = row.querySelector(".score-delta-value");
+  const indicator = resolveScoreIndicator(member);
+
+  if (!indicator) {
+    scoreGlyphNode.style.color = "";
+    scoreNode.style.color = "";
+    scoreDeltaNode.style.opacity = "0";
+    scoreDeltaNode.style.color = "";
+    scoreDeltaArrowNode.textContent = "";
+    scoreDeltaValueNode.textContent = "";
+    return;
+  }
+
+  scoreGlyphNode.style.color = indicator.color;
+  scoreNode.style.color = indicator.color;
+  scoreDeltaNode.style.opacity = "1";
+  scoreDeltaNode.style.color = indicator.color;
+  scoreDeltaArrowNode.textContent = indicator.leadingText;
+  scoreDeltaValueNode.textContent = indicator.trailingText;
+}
+
+function resolveScoreIndicator(member) {
+  if (member.tierCurrent !== member.tierYesterday) {
+    return {
+      color: tierChangeColor,
+      leadingText: "тир",
+      trailingText: String(parseTierNumber(member.tierCurrent))
+    };
+  }
+
+  const delta = member.pointsCurrent - member.pointsYesterday;
+  if (delta === 0) {
+    return null;
+  }
+
+  return {
+    color: delta > 0 ? positiveScoreColor : negativeScoreColor,
+    leadingText: delta > 0 ? "+" : "-",
+    trailingText: String(Math.abs(delta))
+  };
 }
 
 function resolveReplaceVisual(localFrame, durationFrames) {

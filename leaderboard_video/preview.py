@@ -38,20 +38,20 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--idle-after-ms",
         type=int,
-        default=1000,
+        default=3000,
         help="How long to keep the final static state after animation.",
     )
     parser.add_argument(
         "--row-animation-frames",
         type=int,
-        default=26,
+        default=52,
         help="How many frames a single row animation lasts.",
     )
     parser.add_argument(
         "--row-stagger-frames",
         type=int,
-        default=10,
-        help="How many frames to delay the next row animation.",
+        default=5,
+        help="How many frames to wait after one row animation ends before starting the next.",
     )
     parser.add_argument(
         "--no-autostart",
