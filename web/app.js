@@ -15,6 +15,8 @@ const queryRowStaggerFrames = parseIntegerParam("row-stagger-frames");
 const queryHeadline = readOptionalParam("headline");
 const querySubtitle = readOptionalParam("subtitle");
 const queryLocale = readOptionalParam("locale");
+const positiveScoreColor = "#35AD2E";
+const negativeScoreColor = "#CA2828";
 
 let releaseStart;
 const startSignal = new Promise((resolve) => {
@@ -428,7 +430,7 @@ function renderBoard(config) {
 
   const rowsByUser = new Map();
   for (const member of boardModel.membersByUser.values()) {
-    rowsByUser.set(member.username, createMemberRow(member, member.currentRank || 999));
+    rowsByUser.set(member.username, createMemberRow(member));
   }
 
   const controllers = boardModel.tiers.map((tier) => {
@@ -584,13 +586,10 @@ function createTierCard(tier, rowsByUser) {
   };
 }
 
-function createMemberRow(member, finalRank) {
+function createMemberRow(member) {
   const row = document.createElement("li");
   row.className = "tier-row";
   row.dataset.userId = member.username;
-  if (finalRank <= 3) {
-    row.classList.add(`rank-${finalRank}`);
-  }
 
   const score = document.createElement("div");
   score.className = "score-pill";
@@ -603,7 +602,19 @@ function createMemberRow(member, finalRank) {
   value.className = "score-value";
   value.textContent = String(member.pointsYesterday);
 
-  score.append(glyph, value);
+  const delta = document.createElement("span");
+  delta.className = "score-delta";
+  delta.setAttribute("aria-hidden", "true");
+
+  const deltaArrow = document.createElement("span");
+  deltaArrow.className = "score-delta-arrow";
+
+  const deltaValue = document.createElement("span");
+  deltaValue.className = "score-delta-value";
+
+  delta.append(deltaArrow, deltaValue);
+
+  score.append(glyph, value, delta);
 
   const identity = document.createElement("div");
   identity.className = "identity-block";
@@ -615,18 +626,14 @@ function createMemberRow(member, finalRank) {
   const badges = document.createElement("div");
   badges.className = "badge-row";
 
-  if (finalRank <= 3) {
-    const rankBadge = document.createElement("span");
-    rankBadge.className = "rank-medal";
-    rankBadge.textContent = getRankMedal(finalRank);
-    badges.append(rankBadge);
-  }
+  const rankBadge = document.createElement("span");
+  rankBadge.className = "rank-medal";
+  badges.append(rankBadge);
 
   identity.append(username);
-  if (badges.childElementCount > 0) {
-    identity.append(badges);
-  }
+  identity.append(badges);
   row.append(score, identity);
+  applyRankVisual(row, member.yesterdayRank);
   return row;
 }
 
@@ -646,6 +653,11 @@ function renderFinalSnapshot(boardState) {
     const member = boardState.membersByUser.get(username);
     const scoreNode = row.querySelector(".score-value");
     scoreNode.textContent = String(member.pointsCurrent);
+    applyRankVisual(row, member.currentRank);
+    row.querySelector(".score-glyph").style.color = "";
+    row.querySelector(".score-value").style.color = "";
+    row.querySelector(".score-delta").style.opacity = "0";
+    row.querySelector(".score-delta").style.color = "";
     row.style.transition = "";
     row.style.transform = "";
     row.style.opacity = "1";
@@ -699,10 +711,18 @@ function createTimelineRenderer(boardState, settings) {
   for (const [username, row] of boardState.rowsByUser.entries()) {
     const member = boardState.membersByUser.get(username);
     const scoreNode = row.querySelector(".score-value");
+    const scoreGlyphNode = row.querySelector(".score-glyph");
+    const scoreDeltaNode = row.querySelector(".score-delta");
+    const scoreDeltaArrowNode = row.querySelector(".score-delta-arrow");
+    const scoreDeltaValueNode = row.querySelector(".score-delta-value");
     const state = {
       member,
       row,
       scoreNode,
+      scoreGlyphNode,
+      scoreDeltaNode,
+      scoreDeltaArrowNode,
+      scoreDeltaValueNode,
       firstTop: firstRects.get(username)?.top ?? 0,
       initialRect: null,
       finalRect: null,
@@ -750,6 +770,7 @@ function createTimelineRenderer(boardState, settings) {
       }
 
       transition.ghost = createGhostRow(state.row, transition.prevRect, captureFrameRect, overlay);
+      applyRankVisual(transition.ghost, transition.prevState.rank);
       transition.ghostScoreNode = transition.ghost.querySelector(".score-value");
       if (transition.ghostScoreNode) {
         transition.ghostScoreNode.textContent = String(transition.prevState.points);
@@ -921,11 +942,12 @@ function buildTransitionsForMember(username, scheduledStates, stageSnapshots, st
   const transitions = [];
 
   for (let index = 0; index < scheduledStates.length; index += 1) {
+    const scheduledState = scheduledStates[index];
     const prevState = stageSnapshots[index].memberStatesByUser.get(username);
     const nextState = stageSnapshots[index + 1].memberStatesByUser.get(username);
     const prevRect = stageRects[index].get(username) ?? null;
     const nextRect = stageRects[index + 1].get(username) ?? null;
-    const kind = determineTransitionKind(prevState, nextState, prevRect, nextRect);
+    const kind = determineTransitionKind(username, scheduledState, prevState, nextState, prevRect, nextRect);
 
     if (!kind) {
       continue;
@@ -967,8 +989,12 @@ function buildTierHeaderTransitions(tierKey, scheduledStates, tierHeaderStageRec
   return transitions;
 }
 
-function determineTransitionKind(prevState, nextState, prevRect, nextRect) {
+function determineTransitionKind(username, scheduledState, prevState, nextState, prevRect, nextRect) {
   if (!prevState || !nextState || !prevRect || !nextRect) {
+    return null;
+  }
+
+  if (areRectsEqual(prevRect, nextRect)) {
     return null;
   }
 
@@ -976,19 +1002,15 @@ function determineTransitionKind(prevState, nextState, prevRect, nextRect) {
     return "cross";
   }
 
-  if (areRectsEqual(prevRect, nextRect)) {
-    return null;
-  }
-
-  if (nextRect.top < prevRect.top - 0.5 || Math.abs(nextRect.left - prevRect.left) > 0.5) {
+  if (scheduledState.member.username === username) {
     return "move";
   }
 
-  if (nextRect.top > prevRect.top + 0.5) {
-    return "replace";
+  if (scheduledState.member.tierYesterday !== scheduledState.member.tierCurrent) {
+    return "move";
   }
 
-  return "move";
+  return "replace";
 }
 
 function buildTimelineMetrics(settings, animatedCount) {
@@ -1016,6 +1038,8 @@ function buildTimelineMetrics(settings, animatedCount) {
 
 function renderTimelineState(state, frame, timeline) {
   state.scoreNode.textContent = String(resolveDisplayedScore(state, frame, timeline));
+  renderScoreChange(state, frame, timeline);
+  applyRankVisual(state.row, resolveDisplayedRank(state, frame, timeline));
 
   for (const transition of state.transitions) {
     hideTransitionGhost(transition);
@@ -1116,6 +1140,72 @@ function resolveDisplayedScore(state, frame, timeline) {
   return interpolateScore(state.member.pointsYesterday, state.member.pointsCurrent, easeOutCubic(progress));
 }
 
+function resolveDisplayedRank(state, frame, timeline) {
+  let displayedRank = state.transitions[0]?.prevState?.rank ?? state.member.yesterdayRank ?? 0;
+
+  for (const transition of state.transitions) {
+    const localFrame = frame - transition.startFrame;
+    if (localFrame < 0) {
+      break;
+    }
+
+    if (transition.kind === "cross" || transition.kind === "replace") {
+      const revealStartFrame = Math.min(2, Math.max(0, timeline.rowAnimationFrames - 1));
+      displayedRank = localFrame < revealStartFrame ? transition.prevState.rank : transition.nextState.rank;
+      continue;
+    }
+
+    displayedRank =
+      localFrame >= timeline.rowAnimationFrames ? transition.nextState.rank : transition.prevState.rank;
+  }
+
+  return displayedRank;
+}
+
+function renderScoreChange(state, frame, timeline) {
+  const delta = state.member.pointsCurrent - state.member.pointsYesterday;
+  if (!state.primaryEvent || delta === 0) {
+    resetScoreChange(state);
+    return;
+  }
+
+  const localFrame = frame - state.primaryEvent.startFrame;
+  if (localFrame < 0 || localFrame >= timeline.rowAnimationFrames) {
+    resetScoreChange(state);
+    return;
+  }
+
+  const accentOpacity = resolveScoreChangeOpacity(localFrame, timeline.rowAnimationFrames);
+  const accentColor = delta > 0 ? positiveScoreColor : negativeScoreColor;
+  const mixedColor = mixHexColors("#000000", accentColor, accentOpacity);
+
+  state.scoreGlyphNode.style.color = mixedColor;
+  state.scoreNode.style.color = mixedColor;
+  state.scoreDeltaNode.style.color = mixedColor;
+  state.scoreDeltaNode.style.opacity = String(accentOpacity);
+  state.scoreDeltaArrowNode.textContent = delta > 0 ? "↑" : "↓";
+  state.scoreDeltaValueNode.textContent = String(Math.abs(delta));
+}
+
+function resetScoreChange(state) {
+  state.scoreGlyphNode.style.color = "";
+  state.scoreNode.style.color = "";
+  state.scoreDeltaNode.style.opacity = "0";
+  state.scoreDeltaNode.style.color = "";
+  state.scoreDeltaArrowNode.textContent = "";
+  state.scoreDeltaValueNode.textContent = "";
+}
+
+function resolveScoreChangeOpacity(localFrame, durationFrames) {
+  const fadeInFrames = Math.min(4, durationFrames);
+  const fadeOutFrames = Math.min(6, durationFrames);
+  const fadeIn = easeOutCubic(clamp(localFrame / Math.max(1, fadeInFrames), 0, 1));
+  const fadeOut = easeOutCubic(
+    clamp((durationFrames - localFrame) / Math.max(1, fadeOutFrames), 0, 1)
+  );
+  return Math.min(fadeIn, fadeOut);
+}
+
 function resolveReplaceVisual(localFrame, durationFrames) {
   if (localFrame >= durationFrames) {
     return {
@@ -1158,6 +1248,23 @@ function hideTransitionGhost(transition) {
   transition.ghost.style.transform = "scale(0.8)";
 }
 
+function applyRankVisual(row, rank) {
+  row.classList.remove("rank-1", "rank-2", "rank-3");
+  if (rank >= 1 && rank <= 3) {
+    row.classList.add(`rank-${rank}`);
+  }
+
+  const badgeRow = row.querySelector(".badge-row");
+  const badgeNode = row.querySelector(".rank-medal");
+  if (!badgeRow || !badgeNode) {
+    return;
+  }
+
+  const medal = getRankMedal(rank);
+  badgeNode.textContent = medal;
+  badgeRow.style.display = medal ? "flex" : "none";
+}
+
 function interpolateRect(fromRect, toRect, progress) {
   return {
     top: lerp(fromRect.top, toRect.top, progress),
@@ -1182,6 +1289,25 @@ function copyRect(rect) {
     left: rect.left,
     width: rect.width,
     height: rect.height
+  };
+}
+
+function mixHexColors(fromHex, toHex, progress) {
+  const from = hexToRgb(fromHex);
+  const to = hexToRgb(toHex);
+  return `rgb(${Math.round(lerp(from.r, to.r, progress))} ${Math.round(lerp(from.g, to.g, progress))} ${Math.round(lerp(from.b, to.b, progress))})`;
+}
+
+function hexToRgb(value) {
+  const normalized = value.replace("#", "");
+  const channel =
+    normalized.length === 3
+      ? normalized.split("").map((part) => part + part).join("")
+      : normalized;
+  return {
+    r: Number.parseInt(channel.slice(0, 2), 16),
+    g: Number.parseInt(channel.slice(2, 4), 16),
+    b: Number.parseInt(channel.slice(4, 6), 16)
   };
 }
 

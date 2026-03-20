@@ -8,7 +8,7 @@
   --bronze: #a34d20;
   --preview-border: #d8d8d8;
   --capture-scale: 1;
-  --score-column-width: 174px;
+  --score-column-width: 236px;
   font-family: "Avenir Next", "Helvetica Neue", sans-serif;
 }
 
@@ -202,12 +202,35 @@ body {
   font-size: clamp(2.1rem, 2.4vw, 3rem);
   font-weight: 500;
   letter-spacing: -0.05em;
+  color: var(--text-strong);
 }
 
 .score-glyph {
-  color: #000000;
+  color: inherit;
   font-size: 0.88em;
   line-height: 1;
+}
+
+.score-value {
+  color: inherit;
+}
+
+.score-delta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 3px;
+  margin-left: 10px;
+  opacity: 0;
+  color: inherit;
+  font-size: 1em;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+}
+
+.score-delta-arrow,
+.score-delta-value {
+  color: inherit;
 }
 
 .identity-block {
@@ -289,7 +312,7 @@ body {
   }
 
   .score-pill {
-    width: 96px;
+    width: 132px;
     font-size: 1.6rem;
   }
 
